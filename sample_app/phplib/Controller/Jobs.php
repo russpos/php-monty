@@ -1,6 +1,6 @@
 <?php
 
-class Monty_Controller_Jobs extends Monty_Controller {
+class Controller_Jobs extends Monty_Controller {
 
     public function index($project_id) {
         echo "HELLO WORLD!";

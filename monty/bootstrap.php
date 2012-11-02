@@ -7,5 +7,9 @@ define('MONTY_LIB', MONTY_DIR.DS.'phplib');
 function __autoload($class_name) {
     $parts = explode('_', $class_name);
     $file_path = implode(DS, $parts).'.php';
-    require_once MONTY_LIB.DS.$file_path;
+    if ($parts[0] == 'Monty') {
+        require_once MONTY_LIB.DS.$file_path;
+    } else {
+        require_once APP_LIB.DS.$file_path;
+    }
 }

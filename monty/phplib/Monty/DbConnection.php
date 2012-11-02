@@ -1,5 +1,7 @@
 <?php
 
+define('MONTY_SCHEMA_DIR', MONTY_DIR.DS.'schema');
+
 class Monty_DbConnection {
 
     const SQL_CREATE_SCHEMA = "CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY)";
@@ -20,9 +22,7 @@ class Monty_DbConnection {
         $this->conn = new PDO($connect_opts['type'].':host='.$connect_opts['host'].';dbname='.$connect_opts['database'],
             $connect_opts['user'], $connect_opts['password']);
         $this->createSchema();
-        echo ".... create schema\n";
         if (empty($connect_opts['auto_upgrade'])) {
-            echo "... upgrade \n";
             $this->upgrade();
         }
     }
@@ -33,15 +33,25 @@ class Monty_DbConnection {
     }
 
     private function updateSchema($new_version) {
-
+        $path = MONTY_SCHEMA_DIR.DS.$new_version.'.sql';
+        if (file_exists($path)) {
+            $sql = file_get_contents($path);
+            $this->query($sql);
+            $this->query("INSERT INTO schema_version (version) VALUES (:version)", array(
+                'version' => $new_version
+            ));
+            $this->query('COMMIT');
+            return true;
+        }
+        return false;
     }
 
     private function getSchemaVersion() {
         return $this->queryValue(self::SQL_GET_SCHEMA_VERSION);
     }
 
-    private function queryValue($sql, $default=null, $column=0) {
-        $statement = $this->query($sql);
+    private function queryValue($sql, $params=array(), $default=null, $column=0) {
+        $statement = $this->query($sql, $params);
         $row = $statement->fetch();
         if (empty($row)) {
             return $default;
@@ -50,8 +60,10 @@ class Monty_DbConnection {
     }
 
     public function query($sql, $params = array(), $execute=true) {
-        echo "\n$sql\n";
         $statement = $this->conn->prepare($sql);
+        foreach ($params as $name => $value) {
+            $statement->bindParam(':'.$name, $value);
+        }
         if ($execute) {
             $statement->execute();
         }
