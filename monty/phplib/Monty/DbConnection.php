@@ -62,7 +62,7 @@ class Monty_DbConnection {
     public function query($sql, $params = array(), $execute=true) {
         $statement = $this->conn->prepare($sql);
         foreach ($params as $name => $value) {
-            $statement->bindParam(':'.$name, $value);
+            $statement->bindParam(':'.$name, $params[$name]);
         }
         if ($execute) {
             $statement->execute();

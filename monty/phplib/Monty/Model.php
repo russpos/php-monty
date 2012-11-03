@@ -3,6 +3,9 @@
 abstract class Monty_Model {
 
     const SQL_SELECT_QUERY = "SELECT %s FROM %s ";
+    const SQL_INSERT_QUERY = "INSERT INTO %s (%s) VALUES (%s)";
+    const SQL_DELETE_QUERY = "DELETE FROM %s WHERE %s";
+    const SQL_UPDATE_QUERY = "UPDATE %s SET %s WHERE %s";
 
     const MODEL_PREFIX = 'Monty_Model_';
 
@@ -14,7 +17,13 @@ abstract class Monty_Model {
     const RETURN_MANY = 1;
     const RETURN_SINGLE = 2;
 
+    protected static $connection_class = 'Monty_DbConnection';
+
     protected $data = array();
+
+    protected $dirty = array();
+
+    public static $schema = array();
 
     public function __construct($data=array()) {
         foreach (static::$schema['columns'] as $field => $type) {
@@ -26,11 +35,19 @@ abstract class Monty_Model {
 
     public function __set($name, $value) {
         if (isset(static::$schema['columns'][$name])) {
-            $this->data[$name] = $value;
+            if (!isset($this->data[$name]) || $this->data[$name] !== $value) {
+                $this->data[$name] = $value;
+                $this->dirty[$name] = $value;
+                ksort($this->dirty);
+                ksort($this->data);
+            }
         }
     }
 
     public function __get($name) {
+        if (!isset($this->data[$name])) {
+            return null;
+        }
         return $this->data[$name];
     }
 
@@ -57,41 +74,95 @@ abstract class Monty_Model {
     }
 
     public function toJSON() {
-        print_r($this->data);
+        ksort($this->data);
         return $this->data;
     }
 
+    private function generatePK() {
+        // TODO: NOT THIS!!!!
+        return rand();
+    }
+
+    public function delete() {
+        $table = static::$schema['table'];
+        list($clause, $args) = $this->pkClause();
+        $sql = sprintf(self::SQL_DELETE_QUERY, $table, $clause);
+        $this->query($sql, $args);
+    }
+
+    protected function pkClause() {
+        $props = array();
+        $props[$this->pk()] = $this->id();
+        return static::generateClause($props);
+    }
+
+    protected static function generateClause($props) {
+        $table = static::$schema['table'];
+        $clauses = array();
+        foreach ($props as $name => $value) {
+            $clauses[] = "$table.$name = :$name";
+        }
+        $clause = implode(' AND ', $clauses);
+        return array($clause, $props);
+    }
+
+    protected function pk() {
+        return static::$schema['primary'];
+    }
+
+    protected function id() {
+        $pk = static::$schema['primary'];
+        return $this->{$pk};
+    }
+
     public function store() {
-        $this->update_date = time();
+        $this->update_date = MONTY_TIME;
         $insert = false;
-        $pk = self::$schema['primary'];
-        if (empty($this->{$pk})) {
+        $pk = static::$schema['primary'];
+        if (!$this->id()) {
             $insert = true;
-            $this->{$pk} = rand();
-            $this->create_date = time();
+            $this->{$pk} = $this->generatePK();
+            $this->create_date = MONTY_TIME;
         }
         $data = $this->toJSON();
-        print_r($data);
+        $keys = array_keys($data);
+        $values = array_values($data);
+        $table = static::$schema['table'];
+        if ($insert) {
+            $qs = implode(', ', array_map(function($name) {
+                return ':'.$name;     
+            }, $keys));
+            $columns = implode(', ', $keys);
+            $sql = sprintf(self::SQL_INSERT_QUERY, $table, $columns, $qs);
+        } else {
+            list($columns, $args) = self::generateClause($this->dirty);
+            list($clause, $args) = $this->pkClause();
+            $values[] = $this->{$pk};
+            $sql = sprintf(self::SQL_UPDATE_QUERY, $table, $columns, $clause);
+        }
+        $this->dirty = array();
+        return static::query($sql, $data);
     }
 
     protected static function select($params) {
         $schema = static::$schema;
-        $params = array_merge(self::$query_defaults, $schema, $params);
+        $params = array_merge(static::$query_defaults, $schema, $params);
 
         $table = $params['table'];
         $fields = array();
+        ksort($params['columns']);
         foreach ($params['columns'] as $column => $type) {
             $fields[] = $table.'.'.$column;
         }
         $fields = implode(', ', $fields);
         $sql = sprintf(self::SQL_SELECT_QUERY, $fields, $table);
         $data = array();
-        $results = self::query($sql, $data);
+        $results = static::query($sql, $data);
 
         if ($params['result'] === self::RETURN_SINGLE) {
-            return self::returnSingle($results, $params);
+            return static::returnSingle($results, $params);
         }
-        return self::returnMany($results, $params);
+        return static::returnMany($results, $params);
     }
 
     protected static function returnMany($results, $params) {
@@ -112,11 +183,12 @@ abstract class Monty_Model {
     }
 
     protected static function query($sql, $params=array()) {
-        return Monty_DbConnection::getInstance()->query($sql, $params)->fetchAll();
+        $class_name = static::$connection_class;
+        return $class_name::getInstance()->query($sql, $params)->fetchAll();
     }
 
     public static function findAll() {
-        return self::select(array(
+        return static::select(array(
             'result' => self::RETURN_MANY,
             'conditions' => array(),
         ));

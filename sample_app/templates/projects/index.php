@@ -1,7 +1,7 @@
 <h1>Projects</h1>
 <ul>
 <?php foreach ($projects as $project) { ?>
-<li><?= $project['name'] ?></li>
+<li><?= $project['id'] ?> - <?= $project['name'] ?></li>
 <?php } ?>
 </ul>
 <hr>

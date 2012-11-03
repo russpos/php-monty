@@ -15,7 +15,8 @@ class Controller_Projects extends Monty_Controller {
         $project = new Model_Project();
 
         $project->name = $this->request->post['name'];
+        print_r($project->toJSON());
         $project->store();
-        $this->index();
+        return $this->index();
     }
 }

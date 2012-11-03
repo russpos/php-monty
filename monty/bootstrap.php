@@ -1,6 +1,6 @@
 <?php
 if (!defined('DS')) define('DS', '/');
-
+define('MONTY_TIME', time());
 define('MONTY_DIR', dirname(__FILE__));
 define('MONTY_LIB', MONTY_DIR.DS.'phplib');
 

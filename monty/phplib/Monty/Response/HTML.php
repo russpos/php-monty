@@ -1,7 +1,5 @@
 <?php
 
-define('MONTY_TPL_DIR', MONTY_DIR.DS.'templates');
-
 class Monty_Response_HTML extends Monty_Response {
 
     private $response = '';
@@ -31,7 +29,7 @@ class Monty_Response_HTML extends Monty_Response {
 
     private function partial($template, $vars) {
         $output = '';
-        $path = MONTY_TPL_DIR.DS.$template;
+        $path = APP_TPL.DS.$template;
         if (file_exists($path)) {
             extract($vars);
             ob_start();
