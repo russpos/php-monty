@@ -21,6 +21,8 @@ abstract class Monty_Model {
 
     protected $data = array();
 
+    protected $db_state = array();
+
     protected $dirty = array();
 
     public static $schema = array();
@@ -37,7 +39,11 @@ abstract class Monty_Model {
         if (isset(static::$schema['columns'][$name])) {
             if (!isset($this->data[$name]) || $this->data[$name] !== $value) {
                 $this->data[$name] = $value;
-                $this->dirty[$name] = $value;
+                if (!isset($this->db_state[$name]) || $this->db_state[$name] !== $value) {
+                    $this->dirty[$name] = $value;
+                } else {
+                    unset($this->dirty[$name]);
+                }
                 ksort($this->dirty);
                 ksort($this->data);
             }
@@ -135,12 +141,16 @@ abstract class Monty_Model {
             $columns = implode(', ', $keys);
             $sql = sprintf(self::SQL_INSERT_QUERY, $table, $columns, $qs);
         } else {
+            if (empty($this->dirty)) {
+                return true;
+            }
             list($columns, $args) = self::generateClause($this->dirty);
             list($clause, $args) = $this->pkClause();
             $values[] = $this->{$pk};
             $sql = sprintf(self::SQL_UPDATE_QUERY, $table, $columns, $clause);
         }
         $this->dirty = array();
+        $this->db_state = $this->data;
         return static::query($sql, $data);
     }
 

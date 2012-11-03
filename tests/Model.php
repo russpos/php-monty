@@ -102,5 +102,13 @@ class ModelTest extends TPTest {
         $this->expect($args['name'])->toEqual('Doug');
         $this->expect($args['sample_id'])->toEqual($this->model->sample_id);
     }
+
+    public function itShouldBeNoop() {
+        $this->model->name = 'Doug';
+        $this->model->name = 'Sam';
+        $this->model->store();
+
+        $this->expect(count($this->conn->query_stack))->toEqual(1);
+    }
 }
 new ModelTest($args);
