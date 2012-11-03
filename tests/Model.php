@@ -4,10 +4,12 @@ class MockDbConnection {
 
     static $instance;
 
+    public $return_vals = array();
+
     public $query_stack = array();
 
     public function fetchAll() {
-        return array();
+        return $this->return_vals;
     }
 
     public function query() {
@@ -18,6 +20,7 @@ class MockDbConnection {
     public static function reset() {
         $instance = self::getInstance();
         $instance->query_stack = array();
+        $instance->return_vals = array();
     }
 
     public static function getInstance() {
@@ -109,6 +112,53 @@ class ModelTest extends TPTest {
         $this->model->store();
 
         $this->expect(count($this->conn->query_stack))->toEqual(1);
+    }
+
+    public function itShouldHydrateArrayFindMany() {
+        $this->conn->return_vals = array(
+            array(
+                'sample_id' => 123,
+                'name' => 'Bob',
+                'is_true' => false,
+            ),
+            array(
+                'sample_id' => 140,
+                'name' => 'Robert',
+                'is_true' => true
+            ),
+        );
+
+        $results = SampleModel::findAll();
+
+        $this->expect($results)->toHaveCount(2);
+        $model = $results[0];
+        $this->expect($model)->toBeInstanceOf('SampleModel');
+        $this->expect($model->name)->toEqual('Bob');
+        $this->expect($model->is_true)->toBe(false);
+        $this->expect($model->sample_id)->toBe(123);
+
+        $model = $results[1];
+        $this->expect($model)->toBeInstanceOf('SampleModel');
+        $this->expect($model->name)->toEqual('Robert');
+        $this->expect($model->is_true)->toBe(true);
+        $this->expect($model->sample_id)->toBe(140);
+    }
+
+    public function itShouldHydrateInstanceFindOne() {
+        $this->conn->return_vals = array(
+            array(
+                'sample_id' => 123,
+                'name' => 'Bob',
+                'is_true' => false,
+            ),
+        );
+        $model = SampleModel::find(123);
+        $this->expect($model)->toBeInstanceOf('SampleModel');
+        $this->expect($model->name)->toEqual('Bob');
+        $this->expect($model->is_true)->toBe(false);
+        $this->expect($model->sample_id)->toBe(123);
+
+
     }
 }
 new ModelTest($args);

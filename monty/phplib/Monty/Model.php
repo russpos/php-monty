@@ -189,7 +189,15 @@ abstract class Monty_Model {
     }
 
     protected static function returnSingle($results, $params) {
-        // TODO
+        $values = null;
+        if (empty($results)) {
+            return $values;
+        }
+        $values = $results[0];
+        if ($params['hydrate']) {
+            $values = new static($values);
+        }
+        return $values;
     }
 
     protected static function query($sql, $params=array()) {
@@ -201,6 +209,17 @@ abstract class Monty_Model {
         return static::select(array(
             'result' => self::RETURN_MANY,
             'conditions' => array(),
+        ));
+    }
+
+    public static function find($value) {
+        $conditions = array();
+        $conditions[static::$schema['primary']] = $value;
+        return static::select(array(
+            'result' => self::RETURN_SINGLE,
+            'conditions' => array(
+                $pk => $value,
+            ),
         ));
     }
 
