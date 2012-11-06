@@ -1,8 +1,8 @@
 <?php
 
 abstract class Monty_App {
-    private $options;
-    private $request_data;
+    protected $options;
+    protected $request_data;
 
     public function __construct($opts) {
         $this->options = $opts;
@@ -11,11 +11,11 @@ abstract class Monty_App {
 
     abstract protected function getRoutes(); 
 
-    private function buildAction($request, $action_params, $matches) {
+    protected function buildAction($request, $action_params, $matches) {
         return new Monty_Action($request, $action_params, $matches);
     }
 
-    private function route($request) {
+    public function route($request) {
         $method = $request->getMethod();
         $routes = $this->getRoutes();
         if (!empty($routes[$method])) {
@@ -28,6 +28,13 @@ abstract class Monty_App {
             }
         }
         return $this->unknownAction($request);
+    }
+
+    public function unknownAction($request) {
+        header('HTTP/1.0 404 Not Found');
+        header('Content-type: text/plain');
+        echo 'Route for '.$request->getMethod().' "'.$request->getPath().'" was not found.';
+        exit();
     }
 
     public function serve($request_data, $query_params, $post_fields) {

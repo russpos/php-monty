@@ -27,8 +27,8 @@ class Monty_Request {
     }
 
     public function getPath() {
-        if (!empty($this->server['PATH_INFO'])) {
-            return $this->server['PATH_INFO'];
+        if (!empty($this->server['REQUEST_URI'])) {
+            return $this->server['REQUEST_URI'];
         }
         return '/';
     }

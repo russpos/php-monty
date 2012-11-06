@@ -4,12 +4,16 @@ class MockDbConnection {
 
     static $instance;
 
-    public $return_vals = array();
+    public $return_vals = array(true);
 
     public $query_stack = array();
 
     public function fetchAll() {
         return $this->return_vals;
+    }
+
+    public function lastInsertId() {
+        return rand();
     }
 
     public function query() {
@@ -20,7 +24,7 @@ class MockDbConnection {
     public static function reset() {
         $instance = self::getInstance();
         $instance->query_stack = array();
-        $instance->return_vals = array();
+        $instance->return_vals = array(true);
     }
 
     public static function getInstance() {
@@ -40,6 +44,10 @@ class SampleModel extends Monty_Model {
             'sample_id' => Monty_Model::TYPE_INTEGER,
             'is_true'   => Monty_Model::TYPE_BOOL,
             'name'      => Monty_Model::TYPE_TEXT,
+
+            // These are magic!
+            'create_date' => Monty_Model::TYPE_UNIXTIME,
+            'update_date' => Monty_Model::TYPE_UNIXTIME,
         )
     );
 
@@ -66,11 +74,10 @@ class ModelTest extends TPTest {
         $this->expect(count($this->conn->query_stack))->toEqual(1);
         list($sql, $args) = $this->conn->query_stack[0];
         $this->expect($sql)->toEqual(
-            'INSERT INTO samples (is_true, name, sample_id) VALUES (:is_true, :name, :sample_id)'
+            'INSERT INTO `samples` (`create_date`, `is_true`, `name`, `update_date`) VALUES (:create_date, :is_true, :name, :update_date)'
         );
         $this->expect($args['name'])->toEqual('Sam');
         $this->expect($args['is_true'])->toEqual(true);
-        $this->expect(is_int($args['sample_id']))->toBeTruthy();
     }
 
     public function itShouldSelect() {
@@ -79,7 +86,7 @@ class ModelTest extends TPTest {
         list($sql, $args) = $this->conn->query_stack[1];
 
         $this->expect(trim($sql))->toEqual(
-            'SELECT samples.is_true, samples.name, samples.sample_id FROM samples'
+            'SELECT `samples`.`create_date`, `samples`.`is_true`, `samples`.`name`, `samples`.`sample_id`, `samples`.`update_date` FROM `samples`'
         );
         $this->expect($args)->toEqual(array());
     }
@@ -89,7 +96,7 @@ class ModelTest extends TPTest {
         $this->expect(count($this->conn->query_stack))->toEqual(2);
         list($sql, $args) = $this->conn->query_stack[1];
         $this->expect(trim($sql))->toEqual(
-            'DELETE FROM samples WHERE samples.sample_id = :sample_id'
+            'DELETE FROM `samples` WHERE `samples`.`sample_id` = :sample_id'
         );
         $this->expect($args['sample_id'])->toEqual($this->model->sample_id);
     }
@@ -100,9 +107,23 @@ class ModelTest extends TPTest {
         $this->expect(count($this->conn->query_stack))->toEqual(2);
         list($sql, $args) = $this->conn->query_stack[1];
         $this->expect(trim($sql))->toEqual(
-            'UPDATE samples SET samples.name = :name WHERE samples.sample_id = :sample_id'
+            'UPDATE `samples` SET `samples`.`name` = :name WHERE `samples`.`sample_id` = :sample_id'
         );
         $this->expect($args['name'])->toEqual('Doug');
+        $this->expect($args['sample_id'])->toEqual($this->model->sample_id);
+    }
+
+    public function itShouldUpdateMulitples() {
+        $this->model->name = 'Doug';
+        $this->model->is_true = false;
+        $this->model->store();
+        $this->expect(count($this->conn->query_stack))->toEqual(2);
+        list($sql, $args) = $this->conn->query_stack[1];
+        $this->expect(trim($sql))->toEqual(
+            'UPDATE `samples` SET `samples`.`is_true` = :is_true, `samples`.`name` = :name WHERE `samples`.`sample_id` = :sample_id'
+        );
+        $this->expect($args['name'])->toEqual('Doug');
+        $this->expect($args['is_true'])->toEqual(false);
         $this->expect($args['sample_id'])->toEqual($this->model->sample_id);
     }
 

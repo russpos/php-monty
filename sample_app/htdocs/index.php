@@ -3,11 +3,12 @@
 // Step 1: Require the Monty bootstrap file
 require "../../monty/bootstrap.php";
 
-// Step 2: Define these 5 constants
+// Step 2: Define these constants
 define('APP_WWW', dirname(__FILE__));
 define('APP_DIR', dirname(APP_WWW));
 define('APP_LIB', APP_DIR.DS.'phplib');
 define('APP_TPL', APP_DIR.DS.'templates');
+define('APP_SCHEMA', APP_DIR.DS.'schema');
 define('APP_ENV', isset($_ENV['APP_ENV']) ? $_ENV['APP_ENV'] : 'development');
 
 // Optional: Do any config ovrrides!

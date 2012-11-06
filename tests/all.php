@@ -7,4 +7,5 @@ function run_test($name) {
 require "$dir/../tpt/tpt/tpt.php";
 require "$dir/../monty/bootstrap.php";
 
+run_test("App");
 run_test("Model");

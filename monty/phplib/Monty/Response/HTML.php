@@ -32,6 +32,7 @@ class Monty_Response_HTML extends Monty_Response {
         $path = APP_TPL.DS.$template;
         if (file_exists($path)) {
             extract($vars);
+            $t = new Monty_TemplateHelper();
             ob_start();
             include($path);
             $output = ob_get_clean();
